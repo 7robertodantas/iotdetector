@@ -1,0 +1,102 @@
+.DS_Store
+.idea
+# ==========================
+#   Android + iOS .gitignore
+# ==========================
+
+# --- General ---
+.DS_Store
+*.swp
+*.swo
+*.swn
+*.lock
+*.log
+
+# --- macOS ---
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+*.DS_Store
+
+# --- Flutter/Dart ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+generated_plugin_registrant.dart
+
+# --- Android ---
+android/.gradle/
+android/.idea/
+android/local.properties
+android/.DS_Store
+android/build/
+android/app/build/
+android/.cxx/
+android/captures/
+android/.externalNativeBuild/
+android/.settings/
+
+# --- iOS ---
+ios/Pods/
+ios/.symlinks/
+ios/.flutter-plugins
+ios/.flutter-plugins-dependencies
+ios/.DS_Store
+ios/build/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/ephemeral/
+ios/.generated/
+
+# --- Xcode ---
+*.xcuserstate
+*.xcworkspace
+*.xcuserdata
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+
+# --- Cocoapods ---
+Podfile.lock
+Pods/
+
+# --- Fastlane ---
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+
+# --- Other tools ---
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+*.jks
+
+# --- Crashlytics/Firebase ---
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# --- Coverage ---
+coverage/
+*.lcov
+
+# --- Test outputs ---
+test/output/
+flutter_*.png
+
+# --- Others you might want to add ---
+# .env
+# *.keystore
+
+
