@@ -3,6 +3,9 @@ package com.google.aiedge.examples.object_detection.mqtt
 import android.content.Context
 import android.util.Log
 import info.mqtt.android.service.MqttAndroidClient
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.IMqttToken
@@ -23,6 +26,8 @@ class MqttHelper(context: Context,
         private const val TAG = "MqttHelper"
     }
 
+    private val _isConnected = MutableStateFlow(false)
+    val isConnectedFlow: StateFlow<Boolean> = _isConnected.asStateFlow()
     private var mqttClient: MqttAndroidClient = MqttAndroidClient(context.applicationContext, serverUri, clientId)
 
     init {
@@ -47,7 +52,7 @@ class MqttHelper(context: Context,
         connect()
     }
 
-    private fun connect() {
+    fun connect() {
         val mqttConnectOptions = MqttConnectOptions().apply {
             isAutomaticReconnect = true
             isCleanSession = true // Set to false if you want persistent sessions
@@ -60,10 +65,12 @@ class MqttHelper(context: Context,
         try {
             mqttClient.connect(mqttConnectOptions, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
+                    _isConnected.value = true
                     Log.d(TAG, "Connection success")
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+                    _isConnected.value = false
                     Log.e(TAG, "Connection failed: ${exception?.message}")
                 }
             })

@@ -32,6 +32,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -48,8 +50,9 @@ class MainViewModel(
 
         private const val TAG = "MainViewModel"
         private const val MQTT_BROKER_URL = "tcp://192.168.0.150:1883"
-        private const val MQTT_CLIENT_ID = "ObjectDetectionApp"
-        private const val MQTT_TOPIC_DETECTIONS = "detections/%s/object"
+        private const val MQTT_CLIENT_ID = "PersonDetectionApp"
+        private const val MQTT_TOPIC_DETECTIONS = "aha/person_detector/%s_persons/stat_t"
+        private const val MQTT_TOPIC_CONFIG = "homeassistant/sensor/person_detector/%s/config"
         private const val MQTT_USERNAME = "usermqtt"
         private val MQTT_PASSWORD = "passmqtt".toCharArray()
 
@@ -69,6 +72,10 @@ class MainViewModel(
                 )
                 val uniqueId = getOrCreateUniqueId(context)
 
+                if (!mqttHelper.isConnected()) {
+                    mqttHelper.connect()
+                }
+
                 return MainViewModel(uniqueId, objectDetectorHelper, mqttHelper) as T
             }
         }
@@ -84,6 +91,51 @@ class MainViewModel(
         }
     }
 
+    private fun publishHomeAssistantConfig(mqttHelper: MqttHelper, uniqueId: String) {
+        val configPayload = """
+                {
+                  "name": "Person Sensor",
+                  "stat_t": "${String.format(MQTT_TOPIC_DETECTIONS, uniqueId)}",
+                  "val_tpl": "{{ value }}",
+                  "unit_of_meas": "people",
+                  "uniq_id": "${uniqueId}_person_detector",
+                  "device": {
+                    "ids": ["$uniqueId"],
+                    "name": "Person Detector $uniqueId",
+                    "mf": "IoT PPGTI",
+                    "mdl": "EdgeCamera v1",
+                    "sw": "1.0.0"
+                  }
+                }
+            """.trimIndent()
+
+        val configTopic = String.format(MQTT_TOPIC_CONFIG, uniqueId)
+
+        if (mqttHelper.isConnected()) {
+            mqttHelper.publish(configTopic, configPayload, retained = true)
+            Log.d(TAG, "MQTT: Home Assistant config published to $configTopic")
+        } else {
+            Log.w(TAG, "MQTT: Not connected, cannot publish Home Assistant config yet.")
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            mqttHelper.isConnectedFlow
+                .filter { isConnected -> isConnected }
+                .first() // Pega o primeiro evento de conexão true e depois cancela a coleta (ou use take(1))
+                .apply {
+                    Log.d(TAG, "MQTT connection established. Publishing Home Assistant config.")
+                    publishHomeAssistantConfig(mqttHelper, uniqueId)
+                }
+        }
+
+        if (!mqttHelper.isConnected()) {
+            mqttHelper.connect()
+        }
+    }
+
+
     private var detectJob: Job? = null
 
     private val detectionResult =
@@ -93,8 +145,10 @@ class MainViewModel(
                     flow.value = result // Update the local state flow
 
                     result.let { detection ->
+                        val persons = detection.detections.count { det -> det.label == "person" }
+
                         val jsonPayload = try {
-                            formatDetectionResultForMqtt(detection) // Serialize to JSON
+                            Json.encodeToString(persons)
                         } catch (e: Exception) {
                             // Log the serialization error or handle it appropriately
                             Log.e(TAG, "MQTT: Error serializing DetectionResult to JSON: ${e.message}")
