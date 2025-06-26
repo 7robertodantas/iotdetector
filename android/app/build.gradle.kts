@@ -3,16 +3,17 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.jetbrainsKotlinSerialization)
     alias(libs.plugins.undercouchDownload)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
     namespace = "com.google.aiedge.examples.object_detection"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.google.aiedge.examples.object_detection"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -72,8 +73,7 @@ dependencies {
     implementation(libs.accompanist.permissions)
     implementation(libs.androidx.localbroadcastmanager)
 
-    implementation(libs.eclipse.paho.client)
-    implementation(libs.eclipse.paho.android)
+    implementation(libs.paho.android)
 
     implementation(libs.jetbrains.kotlinx.serialization.json)
 
@@ -90,4 +90,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
+    stabilityConfigurationFile = rootProject.layout.projectDirectory.file("stability_config.conf")
 }

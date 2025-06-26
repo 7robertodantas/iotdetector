@@ -3,7 +3,7 @@ accompanistPermissions = "0.23.1"
 agp = "8.10.1"
 cameraCore = "1.3.3"
 exoplayer = "2.19.1"
-kotlin = "1.9.0"
+kotlin = "2.1.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
@@ -17,7 +17,7 @@ eclipsePahoClient="1.2.5"
 eclipsePahoAndroid="1.1.1"
 kotlinxSerializationJson = "1.6.3"
 localbroadcastmanager = "1.1.0"
-pahoMqttAndroid = "4.4.1"
+pahoMqttAndroid = "4.3"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -49,8 +49,7 @@ litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "
 litert-support = { group = "com.google.ai.edge.litert", name = "litert-support", version.ref = "litert" }
 litert-metadata = { group = "com.google.ai.edge.litert", name = "litert-metadata", version.ref = "litert" }
 
-eclipse-paho-client = { group = "org.eclipse.paho", name = "org.eclipse.paho.client.mqttv3", version.ref = "eclipsePahoClient" }
-eclipse-paho-android = { group = "org.eclipse.paho", name = "org.eclipse.paho.android.service", version.ref = "eclipsePahoAndroid" }
+paho-android = { group = "com.github.hannesa2", name = "paho.mqtt.android", version.ref="pahoMqttAndroid" }
 
 jetbrains-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 
@@ -59,3 +58,5 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 jetbrainsKotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 undercouchDownload = { id = "de.undercouch.download", version.ref = "undercouchDownload" }
+
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
