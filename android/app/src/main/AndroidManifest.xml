@@ -5,8 +5,13 @@
     <!-- Declare features -->
     <uses-feature android:name="android.hardware.camera" />
 
-    <!-- Declare permissions -->
+    <!-- for the camera inference -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- for mqtt connection -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
 
     <application
@@ -19,6 +24,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ObjectDetection"
         tools:targetApi="31">
+
+        <service android:name="org.eclipse.paho.android.service.MqttService" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

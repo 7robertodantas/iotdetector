@@ -70,6 +70,9 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.accompanist.permissions)
 
+    implementation(libs.eclipse.paho.client)
+    implementation(libs.eclipse.paho.android)
+
     implementation(libs.exoplayer)
 
     implementation(libs.litert)
