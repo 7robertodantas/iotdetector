@@ -17,11 +17,10 @@
 package com.google.aiedge.examples.object_detection
 
 import android.content.Context
-import android.content.Context.RECEIVER_EXPORTED
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.camera.core.ImageProxy
-import androidx.core.content.ContextCompat.registerReceiver
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -41,6 +40,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class MainViewModel(
+    private val uniqueId : String,
     private val objectDetectorHelper: ObjectDetectorHelper,
     private val mqttHelper: MqttHelper) : ViewModel() {
 
@@ -49,7 +49,7 @@ class MainViewModel(
         private const val TAG = "MainViewModel"
         private const val MQTT_BROKER_URL = "tcp://192.168.0.150:1883"
         private const val MQTT_CLIENT_ID = "ObjectDetectionApp"
-        private const val MQTT_TOPIC_DETECTIONS = "detections/object"
+        private const val MQTT_TOPIC_DETECTIONS = "detections/%s/object"
         private const val MQTT_USERNAME = "usermqtt"
         private val MQTT_PASSWORD = "passmqtt".toCharArray()
 
@@ -67,8 +67,20 @@ class MainViewModel(
                     username = MQTT_USERNAME,
                     pass = MQTT_PASSWORD
                 )
-                return MainViewModel(objectDetectorHelper, mqttHelper) as T
+                val uniqueId = getOrCreateUniqueId(context)
+
+                return MainViewModel(uniqueId, objectDetectorHelper, mqttHelper) as T
             }
+        }
+
+        fun getOrCreateUniqueId(context: Context): String {
+            val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            var uniqueId = prefs.getString("unique_id", null)
+            if (uniqueId == null) {
+                uniqueId = java.util.UUID.randomUUID().toString()
+                prefs.edit { putString("unique_id", uniqueId) }
+            }
+            return uniqueId
         }
     }
 
@@ -93,7 +105,7 @@ class MainViewModel(
                         if (jsonPayload == null) {
                             Log.e(TAG, "MQTT: Could not serialize json")
                         } else if (mqttHelper.isConnected()) {
-                            mqttHelper.publish(MQTT_TOPIC_DETECTIONS, jsonPayload)
+                            mqttHelper.publish(String.format(MQTT_TOPIC_DETECTIONS, uniqueId), jsonPayload)
                         } else {
                             // Handle case where MQTT is not connected (e.g., log, queue, or ignore)
                             Log.d(TAG, "MQTT: Not connected, cannot send detection result.")
@@ -105,12 +117,15 @@ class MainViewModel(
         }
 
     private fun formatDetectionResultForMqtt(result: ObjectDetectorHelper.DetectionResult): String {
-        val res = result.detections.map { det ->
+        val res =
             DetectionJson(
-                label = det.label,
-                score = det.score
+                result.detections.map { det ->
+                    DetectionJsonEntry(
+                        name = det.label,
+                        confidence = det.score
+                    )
+                }
             )
-        }
 
         val jsonString = Json.encodeToString(res)
         return jsonString
@@ -209,7 +224,12 @@ class MainViewModel(
 
     @Serializable
     data class DetectionJson(
-        val label: String,
-        val score: Float
+        val objects: List<DetectionJsonEntry>
+    )
+
+    @Serializable
+    data class DetectionJsonEntry(
+        val name: String,
+        val confidence: Float
     )
 }
