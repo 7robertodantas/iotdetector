@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.jetbrainsKotlinSerialization)
     alias(libs.plugins.undercouchDownload)
 }
 
@@ -69,6 +70,7 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.accompanist.permissions)
+    implementation(libs.androidx.localbroadcastmanager)
 
     implementation(libs.eclipse.paho.client)
     implementation(libs.eclipse.paho.android)

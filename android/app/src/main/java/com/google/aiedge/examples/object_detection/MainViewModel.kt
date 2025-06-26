@@ -17,12 +17,16 @@
 package com.google.aiedge.examples.object_detection
 
 import android.content.Context
+import android.content.Context.RECEIVER_EXPORTED
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.camera.core.ImageProxy
+import androidx.core.content.ContextCompat.registerReceiver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.google.aiedge.examples.object_detection.mqtt.MqttHelper
 import com.google.aiedge.examples.object_detection.objectdetector.ObjectDetectorHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,16 +36,38 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
-class MainViewModel(private val objectDetectorHelper: ObjectDetectorHelper) : ViewModel() {
+class MainViewModel(
+    private val objectDetectorHelper: ObjectDetectorHelper,
+    private val mqttHelper: MqttHelper) : ViewModel() {
+
     companion object {
+
+        private const val TAG = "MainViewModel"
+        private const val MQTT_BROKER_URL = "tcp://192.168.0.150:1883"
+        private const val MQTT_CLIENT_ID = "ObjectDetectionApp"
+        private const val MQTT_TOPIC_DETECTIONS = "detections/object"
+        private const val MQTT_USERNAME = "usermqtt"
+        private val MQTT_PASSWORD = "passmqtt".toCharArray()
+
         fun getFactory(context: Context) = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 // To apply object detection, we use our ObjectDetectorHelper class,
                 // which abstracts away the specifics of using MediaPipe  for object
                 // detection from the UI elements of the app
                 val objectDetectorHelper = ObjectDetectorHelper(context = context)
-                return MainViewModel(objectDetectorHelper) as T
+
+                val mqttHelper = MqttHelper(
+                    context = context.applicationContext,
+                    serverUri = MQTT_BROKER_URL,
+                    clientId = MQTT_CLIENT_ID,
+                    username = MQTT_USERNAME,
+                    pass = MQTT_PASSWORD
+                )
+                return MainViewModel(objectDetectorHelper, mqttHelper) as T
             }
         }
     }
@@ -49,11 +75,46 @@ class MainViewModel(private val objectDetectorHelper: ObjectDetectorHelper) : Vi
     private var detectJob: Job? = null
 
     private val detectionResult =
-        MutableStateFlow<ObjectDetectorHelper.DetectionResult?>(null).also {
+        MutableStateFlow<ObjectDetectorHelper.DetectionResult?>(null).also { flow ->
             viewModelScope.launch {
-                objectDetectorHelper.detectionResult.collect(it)
+                objectDetectorHelper.detectionResult.collect { result ->
+                    flow.value = result // Update the local state flow
+
+                    result.let { detection ->
+                        val jsonPayload = try {
+                            formatDetectionResultForMqtt(detection) // Serialize to JSON
+                        } catch (e: Exception) {
+                            // Log the serialization error or handle it appropriately
+                            Log.e(TAG, "MQTT: Error serializing DetectionResult to JSON: ${e.message}")
+                            // Fallback or skip publishing
+                            null
+                        }
+
+                        if (jsonPayload == null) {
+                            Log.e(TAG, "MQTT: Could not serialize json")
+                        } else if (mqttHelper.isConnected()) {
+                            mqttHelper.publish(MQTT_TOPIC_DETECTIONS, jsonPayload)
+                        } else {
+                            // Handle case where MQTT is not connected (e.g., log, queue, or ignore)
+                            Log.d(TAG, "MQTT: Not connected, cannot send detection result.")
+                        }
+                    }
+
+                }
             }
         }
+
+    private fun formatDetectionResultForMqtt(result: ObjectDetectorHelper.DetectionResult): String {
+        val res = result.detections.map { det ->
+            DetectionJson(
+                label = det.label,
+                score = det.score
+            )
+        }
+
+        val jsonString = Json.encodeToString(res)
+        return jsonString
+    }
 
     private val setting = MutableStateFlow(Setting())
         .apply {
@@ -139,4 +200,16 @@ class MainViewModel(private val objectDetectorHelper: ObjectDetectorHelper) : Vi
     fun errorMessageShown() {
         errorMessage.update { null }
     }
+
+    // Disconnect MQTT when ViewModel is cleared
+    override fun onCleared() {
+        super.onCleared()
+        mqttHelper.disconnect()
+    }
+
+    @Serializable
+    data class DetectionJson(
+        val label: String,
+        val score: Float
+    )
 }
