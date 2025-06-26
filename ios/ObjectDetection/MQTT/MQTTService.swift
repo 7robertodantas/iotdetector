@@ -46,7 +46,14 @@ final class MQTTService: NSObject {
             return
         }
 
-        for (label, quantidade) in labels {
+        let consideredLabels: [String] = [
+            "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train",
+            "truck", "boat", "bird", "cat", "dog", "horse", "sheep", "cow",
+            "elephant", "bear", "zebra", "giraffe", "kite",
+        ]
+
+        for label in consideredLabels {
+            let quantidade = labels[label.lowercased()] ?? 0
             let topico = "aha/object_detector/\(uniqueId)/\(label)/stat_t"
             let mensagem = "\(quantidade)"
 
