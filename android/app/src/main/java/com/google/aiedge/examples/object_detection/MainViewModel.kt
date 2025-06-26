@@ -42,9 +42,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class MainViewModel(
-    private val uniqueId : String,
+    private val uniqueId: String,
     private val objectDetectorHelper: ObjectDetectorHelper,
-    private val mqttHelper: MqttHelper) : ViewModel() {
+    private val mqttHelper: MqttHelper
+) : ViewModel() {
 
     companion object {
 
@@ -56,8 +57,30 @@ class MainViewModel(
         private const val MQTT_USERNAME = "usermqtt"
         private val MQTT_PASSWORD = "passmqtt".toCharArray()
 
-//        val allCocoLabels = listOf("__background__", "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush")
-        private val consideredLabels = listOf("person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "kite", "teddy bear")
+        //        val allCocoLabels = listOf("__background__", "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush")
+        private val consideredLabels = listOf(
+            "person",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "airplane",
+            "bus",
+            "train",
+            "truck",
+            "boat",
+            "bird",
+            "cat",
+            "dog",
+            "horse",
+            "sheep",
+            "cow",
+            "elephant",
+            "bear",
+            "zebra",
+            "giraffe",
+            "kite",
+            "teddy bear"
+        )
 
         fun getFactory(context: Context) = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -120,11 +143,11 @@ class MainViewModel(
     @Serializable
     data class ComponentEntry(
         val platform: String,
-        val name : String,
-        val stat_t : String,
-        val val_tpl : String,
-        val unit_of_meas : String,
-        val uniq_id : String
+        val name: String,
+        val stat_t: String,
+        val val_tpl: String,
+        val unit_of_meas: String,
+        val uniq_id: String
     )
 
     private fun publishHomeAssistantConfig(mqttHelper: MqttHelper, uniqueId: String) {
@@ -188,6 +211,10 @@ class MainViewModel(
 
     private var detectJob: Job? = null
 
+    private val _labelCounts = MutableStateFlow(consideredLabels.associateWith { 0 })
+
+    val labelCounts: StateFlow<Map<String, Int>> = _labelCounts
+
     private val detectionResult =
         MutableStateFlow<ObjectDetectorHelper.DetectionResult?>(null).also { flow ->
             viewModelScope.launch {
@@ -196,23 +223,35 @@ class MainViewModel(
 
                     result.let { detection ->
                         // Group detections by label and count them
-                        val countsByLabel = detection.detections
+                        val newCountsByLabel = detection.detections
                             .filter { consideredLabels.contains(it.label) }
                             .groupBy { it.label }
                             .mapValues { it.value.size }
 
-                        // Ensure all cocoLabels are present in the counts, with 0 if not detected
-                        val allLabelCounts = consideredLabels.associateWith { label ->
-                            countsByLabel[label] ?: 0
+                        // Ensure all consideredLabels are present in the new counts, with 0 if not detected
+                        val newAllLabelCounts = consideredLabels.associateWith { label ->
+                            newCountsByLabel[label] ?: 0
                         }
 
+                        // Get the previous counts
+                        val previousAllLabelCounts = _labelCounts.value
+
                         // Publish counts for each cocoLabel
-                        allLabelCounts.forEach { (label, count) ->
+                        newAllLabelCounts.forEach { (label, newCount) ->
+                            val previousCount = previousAllLabelCounts[label]
+
+                            if (newCount == previousCount) {
+                                return@forEach
+                            }
+
                             val jsonPayload = try {
-                                Json.encodeToString(count)
+                                Json.encodeToString(newCount)
                             } catch (e: Exception) {
                                 // Log the serialization error or handle it appropriately
-                                Log.e(TAG, "MQTT: Error serializing count for $label to JSON: ${e.message}")
+                                Log.e(
+                                    TAG,
+                                    "MQTT: Error serializing count for $label to JSON: ${e.message}"
+                                )
                                 // Fallback or skip publishing for this label
                                 null
                             }
@@ -222,31 +261,21 @@ class MainViewModel(
                             } else if (mqttHelper.isConnected()) {
                                 val topic = String.format(MQTT_TOPIC_DETECTIONS, uniqueId, label)
                                 mqttHelper.publish(topic, jsonPayload)
-                                Log.d(TAG, "MQTT: Published $count $label(s) to $topic")
+                                Log.d(TAG, "MQTT: Published $newCount $label(s) to $topic")
                             } else {
                                 // Handle case where MQTT is not connected (e.g., log, queue, or ignore)
-                                Log.d(TAG, "MQTT: Not connected, cannot send detection result for $label.")
+                                Log.d(
+                                    TAG,
+                                    "MQTT: Not connected, cannot send detection result for $label."
+                                )
                             }
                         }
+
+                        _labelCounts.value = newAllLabelCounts
                     }
                 }
             }
         }
-
-    private fun formatDetectionResultForMqtt(result: ObjectDetectorHelper.DetectionResult): String {
-        val res =
-            DetectionJson(
-                result.detections.map { det ->
-                    DetectionJsonEntry(
-                        name = det.label,
-                        confidence = det.score
-                    )
-                }
-            )
-
-        val jsonString = Json.encodeToString(res)
-        return jsonString
-    }
 
     private val setting = MutableStateFlow(Setting())
         .apply {
@@ -271,9 +300,10 @@ class MainViewModel(
 
     val uiState: StateFlow<UiState> = combine(
         detectionResult,
+        labelCounts,
         setting,
         errorMessage
-    ) { result, setting, error ->
+    ) { result, _, setting, error ->
         UiState(
             detectionResult = result,
             setting = setting,
