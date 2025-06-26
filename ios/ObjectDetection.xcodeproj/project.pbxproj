@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -31,6 +31,8 @@
 		BFE653E42C081ED300C55628 /* efficientdet_lite1.txt in Resources */ = {isa = PBXBuildFile; fileRef = BFE653E02C081ED300C55628 /* efficientdet_lite1.txt */; };
 		BFE653E82C081F3C00C55628 /* CVPixelBufferExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFE653E52C081F3C00C55628 /* CVPixelBufferExtension.swift */; };
 		BFE653E92C081F3C00C55628 /* UIImageExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFE653E62C081F3C00C55628 /* UIImageExtension.swift */; };
+		D0CEE15F2E0D8B47004D7FB9 /* MQTTNIO in Frameworks */ = {isa = PBXBuildFile; productRef = D0CEE15E2E0D8B47004D7FB9 /* MQTTNIO */; };
+		D0CEE1612E0D8F2D004D7FB9 /* MQTTNIO in Frameworks */ = {isa = PBXBuildFile; productRef = D0CEE1602E0D8F2D004D7FB9 /* MQTTNIO */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,12 +66,28 @@
 		BFE653E62C081F3C00C55628 /* UIImageExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UIImageExtension.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D0CEE1592E0D8720004D7FB9 /* MQTT */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = MQTT;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		AA9AC598212D39FC000B4E9D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0CEE1612E0D8F2D004D7FB9 /* MQTTNIO in Frameworks */,
 				1E80B32721521BCC7B34949C /* Pods_ObjectDetection.framework in Frameworks */,
+				D0CEE15F2E0D8B47004D7FB9 /* MQTTNIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,6 +147,7 @@
 		AA9AC59D212D39FC000B4E9D /* ObjectDetection */ = {
 			isa = PBXGroup;
 			children = (
+				D0CEE1592E0D8720004D7FB9 /* MQTT */,
 				BFE653E72C081F3C00C55628 /* Extensions */,
 				BFE653DA2C08189800C55628 /* Configs */,
 				AA9AC5D4212D43E0000B4E9D /* Camera Feed */,
@@ -202,10 +221,15 @@
 				AA9AC597212D39FC000B4E9D /* Sources */,
 				AA9AC598212D39FC000B4E9D /* Frameworks */,
 				AA9AC599212D39FC000B4E9D /* Resources */,
+				56DCD740D19A722060C388C4 /* [CP] Copy Pods Resources */,
+				39892960EA0C6078B1F6EC82 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D0CEE1592E0D8720004D7FB9 /* MQTT */,
 			);
 			name = ObjectDetection;
 			productName = ObjectDetection;
@@ -237,6 +261,9 @@
 				Base,
 			);
 			mainGroup = AA9AC592212D39FC000B4E9D;
+			packageReferences = (
+				D0CEE15D2E0D8B47004D7FB9 /* XCRemoteSwiftPackageReference "mqtt-nio" */,
+			);
 			productRefGroup = AA9AC59C212D39FC000B4E9D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -288,6 +315,40 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		39892960EA0C6078B1F6EC82 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ObjectDetection/Pods-ObjectDetection-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ObjectDetection/Pods-ObjectDetection-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ObjectDetection/Pods-ObjectDetection-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		56DCD740D19A722060C388C4 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ObjectDetection/Pods-ObjectDetection-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ObjectDetection/Pods-ObjectDetection-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ObjectDetection/Pods-ObjectDetection-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		AA055D8A21622F7C00B25948 /* ShellScript */ = {
@@ -476,7 +537,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = Y2XPB4T47H;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -487,7 +548,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.google.litert.examples.ObjectDetection;
+				PRODUCT_BUNDLE_IDENTIFIER = com.google.litert.examples.herlmanoel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
@@ -504,7 +565,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = Y2XPB4T47H;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -515,7 +576,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.google.litert.examples.ObjectDetection;
+				PRODUCT_BUNDLE_IDENTIFIER = com.google.litert.examples.herlmanoel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
@@ -546,6 +607,29 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D0CEE15D2E0D8B47004D7FB9 /* XCRemoteSwiftPackageReference "mqtt-nio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sroebert/mqtt-nio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D0CEE15E2E0D8B47004D7FB9 /* MQTTNIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0CEE15D2E0D8B47004D7FB9 /* XCRemoteSwiftPackageReference "mqtt-nio" */;
+			productName = MQTTNIO;
+		};
+		D0CEE1602E0D8F2D004D7FB9 /* MQTTNIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MQTTNIO;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AA9AC593212D39FC000B4E9D /* Project object */;
 }

@@ -18,7 +18,6 @@ import TensorFlowLite
 import AVFoundation
 import CoreImage
 import Accelerate
-
 /**
  This protocol must be adopted by any class that wants to take appropriate actions during  different stages of image classification on videos.
  */
@@ -75,9 +74,14 @@ class ObjectDetectorService: NSObject {
     self.scoreThreshold = scoreThreshold
     self.maxResult = maxResult
     super.init()
-
+      
+    MQTTService.conectar()
     createObjectDetector()
   }
+
+    deinit {
+        MQTTService.desconectar()
+    }
 
   private func createObjectDetector() {
     guard let modelPath = model.modelPath else {
@@ -242,6 +246,11 @@ class ObjectDetectorService: NSObject {
 
     // Process the results.
     let topNObject = getTopN(boxs: boxs, categories: categories, scores: scores)
+      
+          let quantidadePessoas = topNObject.filter {
+            $0.categoryLabel.lowercased() == "person"
+          }.count
+          MQTTService.publicarQuantidadePessoas(quantidadePessoas)
 
     // Return the inference time and inference results.
     return Result(inferenceTime: interval, objects: topNObject)
