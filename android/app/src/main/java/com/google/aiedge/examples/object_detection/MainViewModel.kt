@@ -60,14 +60,6 @@ class MainViewModel(
         //        val allCocoLabels = listOf("__background__", "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush")
         private val consideredLabels = listOf(
             "person",
-            "bicycle",
-            "car",
-            "motorcycle",
-            "airplane",
-            "bus",
-            "train",
-            "truck",
-            "boat",
             "bird",
             "cat",
             "dog",
@@ -77,9 +69,7 @@ class MainViewModel(
             "elephant",
             "bear",
             "zebra",
-            "giraffe",
-            "kite",
-            "teddy bear"
+            "giraffe"
         )
 
         fun getFactory(context: Context) = object : ViewModelProvider.Factory {
@@ -151,7 +141,6 @@ class MainViewModel(
     )
 
     private fun publishHomeAssistantConfig(mqttHelper: MqttHelper, uniqueId: String) {
-
         val components = consideredLabels.map {
             ComponentEntry(
                 platform = "sensor",
@@ -189,6 +178,13 @@ class MainViewModel(
             Log.d(TAG, "MQTT: Home Assistant config published to $configTopic")
         } else {
             Log.w(TAG, "MQTT: Not connected, cannot publish Home Assistant config yet.")
+        }
+
+        // Initialize labels
+        consideredLabels.forEach { label ->
+            val topic = String.format(MQTT_TOPIC_DETECTIONS, uniqueId, label)
+            mqttHelper.publish(topic, "0")
+            Log.d(TAG, "MQTT: Initialize $label(s) to $topic")
         }
     }
 
