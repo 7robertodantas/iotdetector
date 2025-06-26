@@ -247,10 +247,15 @@ class ObjectDetectorService: NSObject {
     // Process the results.
     let topNObject = getTopN(boxs: boxs, categories: categories, scores: scores)
       
-          let quantidadePessoas = topNObject.filter {
-            $0.categoryLabel.lowercased() == "person"
-          }.count
-          MQTTService.publicarQuantidadePessoas(quantidadePessoas)
+    // Cria mapa label → quantidade
+    let contagemPorLabel = Dictionary(grouping: topNObject) { $0.categoryLabel.lowercased() }
+        .mapValues { $0.count }
+
+    // Identificador único do dispositivo (pode vir do UUID salvo em disco ou ser fixo para testes)
+    let uniqueId = "ios-device-001"
+
+    // Publica valores e configura sensores automaticamente se necessário
+    MQTTService.publicarValores(labels: contagemPorLabel, uniqueId: uniqueId)
 
     // Return the inference time and inference results.
     return Result(inferenceTime: interval, objects: topNObject)

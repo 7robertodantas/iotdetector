@@ -7,7 +7,6 @@ enum MQTTConfig {
     static let clientID = "ios-client-\(UUID().uuidString.prefix(6))"
     static let username = "aluno"
     static let password = "4luno#imd"
-    static let topicEstado = "appmobile/pessoas"
     static let topicDisponibilidade = "aha/ESP32_Wokwi_01/avty_t"
     static let maxTentativas = 3
 }
@@ -16,7 +15,8 @@ final class MQTTService: NSObject {
     private static var client: CocoaMQTT?
     private static var conectado = false
     private static var tentativas = 0
-    private static var ultimoValorEnviado: String?
+    private static var ultimoValoresEnviados: [String: String] = [:]
+    private static var configuracoesPublicadas: Set<String> = []
 
     static func conectar() {
         let mqtt = CocoaMQTT(clientID: MQTTConfig.clientID, host: MQTTConfig.host, port: MQTTConfig.port)
@@ -26,7 +26,6 @@ final class MQTTService: NSObject {
         mqtt.cleanSession = true
         mqtt.autoReconnect = false
         mqtt.delegate = MQTTDelegateHandler.shared
-
         client = mqtt
         tentarConectar()
     }
@@ -36,27 +35,84 @@ final class MQTTService: NSObject {
             print("❌ Não foi possível conectar após \(MQTTConfig.maxTentativas) tentativas.")
             return
         }
-
         tentativas += 1
         print("🔁 Tentando conectar... tentativa \(tentativas)")
         client?.connect()
     }
 
-    static func publicarQuantidadePessoas(_ quantidade: Int) {
+    static func publicarValores(labels: [String: Int], uniqueId: String) {
         guard conectado else {
-            print("⚠️ MQTT não conectado. Mensagem não enviada.")
+            print("⚠️ MQTT não conectado. Mensagens não enviadas.")
             return
         }
 
-        let mensagem = String(quantidade)
-        guard mensagem != ultimoValorEnviado else {
-            print("🔁 Valor repetido. Ignorando envio.")
+        for (label, quantidade) in labels {
+            let topico = "aha/object_detector/\(uniqueId)/\(label)/stat_t"
+            let mensagem = "\(quantidade)"
+
+            if ultimoValoresEnviados[label] == mensagem {
+                print("🔁 \(label): valor repetido (\(mensagem)). Ignorando.")
+                continue
+            }
+
+            if !configuracoesPublicadas.contains(label) {
+                publicarConfiguracaoSensor(label: label, uniqueId: uniqueId)
+            }
+
+            client?.publish(topico, withString: mensagem, qos: .qos1)
+            ultimoValoresEnviados[label] = mensagem
+            print("📤 \(label): \(mensagem) → \(topico)")
+        }
+    }
+
+    private static func publicarConfiguracaoSensor(label: String, uniqueId: String) {
+        let component = ComponentEntry(
+            platform: "sensor",
+            name: label,
+            stat_t: "aha/object_detector/\(uniqueId)/\(label)/stat_t",
+            val_tpl: "{{ value }}",
+            unit_of_meas: label,
+            uniq_id: "\(uniqueId)_\(label)"
+        )
+
+        let device = DeviceEntry(
+            ids: [uniqueId],
+            name: "Object Detector \(uniqueId)",
+            mf: "IoT PPGTI",
+            mdl: "EdgeCamera v1",
+            sw: "1.0.0"
+        )
+
+        let origin = OriginEntry(
+            name: "Object Detector",
+            sw: "1.0.0"
+        )
+
+        let config = ConfigEntry(
+            cmps: [label: component],
+            o: origin,
+            dev: device
+        )
+
+        guard let jsonData = try? JSONEncoder().encode(config),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            print("❌ Erro ao codificar configuração de \(label).")
             return
         }
 
-        client?.publish(MQTTConfig.topicEstado, withString: mensagem, qos: .qos1)
-        ultimoValorEnviado = mensagem
-        print("📤 Pessoas detectadas: \(mensagem)")
+        let configTopic = "homeassistant/device/object_detector/\(uniqueId)/config"
+        client?.publish(configTopic, withString: jsonString, qos: .qos1, retained: true)
+        configuracoesPublicadas.insert(label)
+        print("📤 Configuração publicada para label '\(label)' em \(configTopic)")
+    }
+
+    static func publicar(topico: String, mensagem: String, qos: CocoaMQTTQoS = .qos1, retained: Bool = false) {
+        guard conectado else {
+            print("⚠️ MQTT não conectado. Mensagem não enviada para \(topico)")
+            return
+        }
+        client?.publish(topico, withString: mensagem, qos: qos, retained: retained)
+        print("📤 Mensagem publicada no tópico \(topico): \(mensagem)")
     }
 
     private static func publicarDisponibilidade(_ status: String) {
@@ -71,6 +127,8 @@ final class MQTTService: NSObject {
         publicarDisponibilidade("offline")
         client?.disconnect()
         conectado = false
+        configuracoesPublicadas.removeAll()
+        ultimoValoresEnviados.removeAll()
         print("🔌 Cliente MQTT desconectado manualmente.")
     }
 
@@ -122,10 +180,11 @@ final class MQTTService: NSObject {
 
         func mqttDidDisconnect(_ mqtt: CocoaMQTT, withError err: Error?) {
             MQTTService.conectado = false
+            MQTTService.configuracoesPublicadas.removeAll()
+            MQTTService.ultimoValoresEnviados.removeAll()
             print("🔌 Desconectado: \(err?.localizedDescription ?? "sem erro")")
         }
 
-        // Métodos opcionais implementados por segurança
         func mqtt(_ mqtt: CocoaMQTT, didReceive trust: SecTrust, completionHandler: @escaping (Bool) -> Void) {
             completionHandler(true)
         }
@@ -138,7 +197,34 @@ final class MQTTService: NSObject {
             print("📶 Estado da conexão: \(state)")
         }
     }
-
-
 }
 
+// MARK: - Estruturas JSON compatíveis com o modelo Android
+
+struct ComponentEntry: Codable {
+    let platform: String
+    let name: String
+    let stat_t: String
+    let val_tpl: String
+    let unit_of_meas: String
+    let uniq_id: String
+}
+
+struct DeviceEntry: Codable {
+    let ids: [String]
+    let name: String
+    let mf: String
+    let mdl: String
+    let sw: String
+}
+
+struct OriginEntry: Codable {
+    let name: String
+    let sw: String
+}
+
+struct ConfigEntry: Codable {
+    let cmps: [String: ComponentEntry]
+    let o: OriginEntry
+    let dev: DeviceEntry
+}
