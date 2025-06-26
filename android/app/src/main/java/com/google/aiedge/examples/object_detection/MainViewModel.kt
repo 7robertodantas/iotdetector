@@ -51,10 +51,13 @@ class MainViewModel(
         private const val TAG = "MainViewModel"
         private const val MQTT_BROKER_URL = "tcp://192.168.0.150:1883"
         private const val MQTT_CLIENT_ID = "PersonDetectionApp"
-        private const val MQTT_TOPIC_DETECTIONS = "aha/person_detector/%s_persons/stat_t"
-        private const val MQTT_TOPIC_CONFIG = "homeassistant/sensor/person_detector/%s/config"
+        private const val MQTT_TOPIC_DETECTIONS = "aha/object_detector/%s/%s/stat_t"
+        private const val MQTT_TOPIC_CONFIG = "homeassistant/device/object_detector/%s/config"
         private const val MQTT_USERNAME = "usermqtt"
         private val MQTT_PASSWORD = "passmqtt".toCharArray()
+
+//        val allCocoLabels = listOf("__background__", "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush")
+        private val consideredLabels = listOf("person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "kite", "teddy bear")
 
         fun getFactory(context: Context) = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -91,23 +94,70 @@ class MainViewModel(
         }
     }
 
+
+    @Serializable
+    data class DeviceEntry(
+        val ids: List<String>,
+        val name: String,
+        val mf: String,
+        val mdl: String,
+        val sw: String
+    )
+
+    @Serializable
+    data class ConfigEntry(
+        val cmps: Map<String, ComponentEntry>,
+        val o: OriginEntry,
+        val dev: DeviceEntry
+    )
+
+    @Serializable
+    data class OriginEntry(
+        val name: String,
+        val sw: String,
+    )
+
+    @Serializable
+    data class ComponentEntry(
+        val platform: String,
+        val name : String,
+        val stat_t : String,
+        val val_tpl : String,
+        val unit_of_meas : String,
+        val uniq_id : String
+    )
+
     private fun publishHomeAssistantConfig(mqttHelper: MqttHelper, uniqueId: String) {
-        val configPayload = """
-                {
-                  "name": "Person Sensor",
-                  "stat_t": "${String.format(MQTT_TOPIC_DETECTIONS, uniqueId)}",
-                  "val_tpl": "{{ value }}",
-                  "unit_of_meas": "people",
-                  "uniq_id": "${uniqueId}_person_detector",
-                  "device": {
-                    "ids": ["$uniqueId"],
-                    "name": "Person Detector $uniqueId",
-                    "mf": "IoT PPGTI",
-                    "mdl": "EdgeCamera v1",
-                    "sw": "1.0.0"
-                  }
-                }
-            """.trimIndent()
+
+        val components = consideredLabels.map {
+            ComponentEntry(
+                platform = "sensor",
+                name = it,
+                stat_t = String.format(MQTT_TOPIC_DETECTIONS, uniqueId, it),
+                val_tpl = "{{ value }}",
+                unit_of_meas = it,
+                uniq_id = "${uniqueId}_$it"
+            )
+        }
+
+        val device = DeviceEntry(
+            ids = listOf(uniqueId),
+            name = "Object Detector $uniqueId",
+            mf = "IoT PPGTI",
+            mdl = "EdgeCamera v1",
+            sw = "1.0.0"
+        )
+
+        val config = ConfigEntry(
+            cmps = components.associateBy { it.name },
+            dev = device,
+            o = OriginEntry(
+                name = "Object Detector",
+                sw = "1.0.0"
+            )
+        )
+
+        val configPayload = Json.encodeToString(config)
 
         val configTopic = String.format(MQTT_TOPIC_CONFIG, uniqueId)
 
@@ -145,27 +195,40 @@ class MainViewModel(
                     flow.value = result // Update the local state flow
 
                     result.let { detection ->
-                        val persons = detection.detections.count { det -> det.label == "person" }
+                        // Group detections by label and count them
+                        val countsByLabel = detection.detections
+                            .filter { consideredLabels.contains(it.label) }
+                            .groupBy { it.label }
+                            .mapValues { it.value.size }
 
-                        val jsonPayload = try {
-                            Json.encodeToString(persons)
-                        } catch (e: Exception) {
-                            // Log the serialization error or handle it appropriately
-                            Log.e(TAG, "MQTT: Error serializing DetectionResult to JSON: ${e.message}")
-                            // Fallback or skip publishing
-                            null
+                        // Ensure all cocoLabels are present in the counts, with 0 if not detected
+                        val allLabelCounts = consideredLabels.associateWith { label ->
+                            countsByLabel[label] ?: 0
                         }
 
-                        if (jsonPayload == null) {
-                            Log.e(TAG, "MQTT: Could not serialize json")
-                        } else if (mqttHelper.isConnected()) {
-                            mqttHelper.publish(String.format(MQTT_TOPIC_DETECTIONS, uniqueId), jsonPayload)
-                        } else {
-                            // Handle case where MQTT is not connected (e.g., log, queue, or ignore)
-                            Log.d(TAG, "MQTT: Not connected, cannot send detection result.")
+                        // Publish counts for each cocoLabel
+                        allLabelCounts.forEach { (label, count) ->
+                            val jsonPayload = try {
+                                Json.encodeToString(count)
+                            } catch (e: Exception) {
+                                // Log the serialization error or handle it appropriately
+                                Log.e(TAG, "MQTT: Error serializing count for $label to JSON: ${e.message}")
+                                // Fallback or skip publishing for this label
+                                null
+                            }
+
+                            if (jsonPayload == null) {
+                                Log.e(TAG, "MQTT: Could not serialize json for $label")
+                            } else if (mqttHelper.isConnected()) {
+                                val topic = String.format(MQTT_TOPIC_DETECTIONS, uniqueId, label)
+                                mqttHelper.publish(topic, jsonPayload)
+                                Log.d(TAG, "MQTT: Published $count $label(s) to $topic")
+                            } else {
+                                // Handle case where MQTT is not connected (e.g., log, queue, or ignore)
+                                Log.d(TAG, "MQTT: Not connected, cannot send detection result for $label.")
+                            }
                         }
                     }
-
                 }
             }
         }
