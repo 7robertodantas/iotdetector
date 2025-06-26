@@ -15,6 +15,7 @@ undercouchDownload = "5.6.0"
 litert = "1.0.0"
 eclipsePahoClient="1.2.5"
 eclipsePahoAndroid="1.1.1"
+kotlinxSerializationJson = "1.6.3"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -48,7 +49,10 @@ litert-metadata = { group = "com.google.ai.edge.litert", name = "litert-metadata
 eclipse-paho-client = { group = "org.eclipse.paho", name = "org.eclipse.paho.client.mqttv3", version.ref = "eclipsePahoClient" }
 eclipse-paho-android = { group = "org.eclipse.paho", name = "org.eclipse.paho.android.service", version.ref = "eclipsePahoAndroid" }
 
+jetbrains-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+jetbrainsKotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 undercouchDownload = { id = "de.undercouch.download", version.ref = "undercouchDownload" }

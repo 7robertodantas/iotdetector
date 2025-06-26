@@ -73,6 +73,8 @@ dependencies {
     implementation(libs.eclipse.paho.client)
     implementation(libs.eclipse.paho.android)
 
+    implementation(libs.jetbrains.kotlinx.serialization.json)
+
     implementation(libs.exoplayer)
 
     implementation(libs.litert)
