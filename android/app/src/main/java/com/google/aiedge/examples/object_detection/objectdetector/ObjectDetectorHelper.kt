@@ -280,7 +280,7 @@ class ObjectDetectorHelper(
 
     companion object {
         val MODEL_DEFAULT = Model.EfficientDetLite2
-        const val MAX_RESULTS_DEFAULT = 5
+        const val MAX_RESULTS_DEFAULT = 20
         const val THRESHOLD_DEFAULT = 0.5F
 
         const val TAG = "ObjectDetectorHelper"
