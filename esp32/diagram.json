@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "author": "Aluízio Rocha Neto",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": -4.76, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 80.75,
+      "left": 115.2,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": -22.8,
+      "left": 176.6,
+      "attrs": { "color": "red" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:GND.3", "r1:1", "black", [ "h0" ] ],
+    [ "led1:C", "r1:2", "black", [ "v0" ] ],
+    [ "esp:2", "led1:A", "red", [ "h0" ] ]
+  ],
+  "dependencies": {}
+}
